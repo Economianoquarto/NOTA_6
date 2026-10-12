@@ -57,15 +57,7 @@ source("app.R", local = FALSE)
 
 Este documento permite analisar a estrutura produtiva do Piauí e simular uma
 alteração na demanda final de um dos 12 setores da Matriz de Insumo-Produto
-(MIP). A parte textual pode ser ampliada com discussão econômica, referências,
-hipóteses e interpretação dos resultados sem separar a análise da ferramenta
-interativa.
-
-::: {.qmd-callout}
-**Interpretação.** Os resultados são efeitos contábeis de um modelo aberto de
-Leontief com coeficientes técnicos fixos. Eles não representam previsão,
-estimação causal ou resposta comportamental dos agentes econômicos.
-:::
+(MIP). 
 
 ## Metodologia
 
@@ -270,52 +262,6 @@ ggplot(
   )
 ```
 
-## Diagnóstico da matriz
-
-```{r}
-data.frame(
-  Verificação = c(
-    "Número de setores",
-    "Raio espectral de A",
-    "Número de condição de I - A",
-    "Máxima folga em X = Z1 + y"
-  ),
-  Resultado = c(
-    modelo$n,
-    formatar_numero(modelo$raio_espectral, 6),
-    formatar_numero(modelo$condicao_sistema, 6),
-    paste0("R$ ", formatar_numero(modelo$erro_balanco, 6), " milhões")
-  ),
-  stringsAsFactors = FALSE
-) %>%
-  knitr::kable(align = c("l", "r"))
-```
-
-A folga máxima da identidade $X = Z\mathbf{1} + y$ é herdada do balanceamento
-da TRUR e está documentada na aba `19_Diagnostico` da planilha-fonte.
-
-## Extensão futura: remunerações
-
-O vetor de remunerações ainda não faz parte da planilha usada nesta versão.
-Quando ele for acrescentado, será possível calcular o coeficiente direto de
-remunerações por unidade de produção,
-
-$$
-c_i^r = \frac{r_i}{x_i},
-$$
-
-e aplicar esses coeficientes ao impacto produtivo para obter a variação de
-remunerações associada ao choque. Nenhum valor foi estimado ou preenchido
-provisoriamente nesta versão.
-
-## Fonte e limitações
-
-Fonte: elaboração própria com base na MIP do Piauí de 2018 contida em
-`dados/nota_6.xlsx`.
-
-O modelo supõe tecnologia fixa, retornos constantes de escala, ausência de
-restrições de capacidade e atendimento integral da demanda adicional. Essas
-hipóteses devem ser consideradas na interpretação econômica dos resultados.
 
 ```{r}
 #| context: server
