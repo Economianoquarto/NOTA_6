@@ -1,0 +1,501 @@
+---
+title: "Choques de demanda na Matriz de Insumo-Produto do Piauí"
+subtitle: "Aplicação interativa com a MIP de 12 setores — Nota 6"
+lang: pt-BR
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    page-layout: full
+    code-fold: true
+    code-summary: "Mostrar código"
+    embed-resources: false
+server: shiny
+resources:
+  - dados/nota_6.xlsx
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| context: setup
+#| include: false
+
+# O app.R concentra a importação, as validações e as funções econômicas.
+# Ao ser carregado por source(), ele cria os objetos modelo e indicadores,
+# mas não inicia outra aplicação Shiny.
+source("app.R", local = FALSE)
+```
+
+```{=html}
+<style>
+.qmd-callout {
+  background: #eef6f8;
+  border-left: 4px solid #176b87;
+  border-radius: 4px;
+  margin: 1rem 0;
+  padding: 0.9rem 1.1rem;
+}
+.qmd-metric {
+  background: #ffffff;
+  border: 1px solid #dfe5e8;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(31, 41, 51, 0.06);
+  min-height: 108px;
+  padding: 1rem;
+}
+.qmd-metric-label { color: #52616b; font-size: 0.9rem; }
+.qmd-metric-value { color: #164b60; font-size: 1.55rem; font-weight: 650; }
+.qmd-source-note { color: #52616b; font-size: 0.9rem; }
+</style>
+```
+
+## Apresentação
+
+Este documento permite analisar a estrutura produtiva do Piauí e simular uma
+alteração na demanda final de um dos 12 setores da Matriz de Insumo-Produto
+(MIP). A parte textual pode ser ampliada com discussão econômica, referências,
+hipóteses e interpretação dos resultados sem separar a análise da ferramenta
+interativa.
+
+::: {.qmd-callout}
+**Interpretação.** Os resultados são efeitos contábeis de um modelo aberto de
+Leontief com coeficientes técnicos fixos. Eles não representam previsão,
+estimação causal ou resposta comportamental dos agentes econômicos.
+:::
+
+## Metodologia
+
+Seja $Z$ a matriz de consumo intermediário e $x$ o vetor do valor bruto da
+produção. A matriz de coeficientes técnicos é obtida por
+
+$$
+A = Z\widehat{x}^{-1}.
+$$
+
+A inversa de Leontief é
+
+$$
+B = (I-A)^{-1}.
+$$
+
+Para um vetor de variações na demanda final, $\Delta y$, o impacto sobre a
+produção é calculado por
+
+$$
+\Delta X = B\Delta y.
+$$
+
+Os efeitos sobre valor adicionado bruto e emprego utilizam os coeficientes
+setoriais $v_i/x_i$ e $e_i/x_i$, respectivamente. As grandezas monetárias da
+planilha estão expressas em R$ milhões.
+
+## Simulação do choque
+
+:::: {.columns}
+
+::: {.column width="30%"}
+
+```{r}
+selectInput(
+  "qmd_setor_choque",
+  "Setor que recebe o choque",
+  choices = modelo$setores,
+  selected = modelo$setores[1]
+)
+
+radioButtons(
+  "qmd_tipo_choque",
+  "Forma de entrada",
+  choices = c(
+    "Valor em R$ milhões" = "valor",
+    "Percentual da demanda final" = "percentual"
+  ),
+  selected = "valor"
+)
+
+uiOutput("qmd_entrada_magnitude")
+uiOutput("qmd_demanda_original")
+```
+
+:::
+
+::: {.column width="70%"}
+
+```{r}
+uiOutput("qmd_mensagem_erro")
+
+fluidRow(
+  column(4, uiOutput("qmd_card_producao")),
+  column(4, uiOutput("qmd_card_indireto")),
+  column(4, uiOutput("qmd_card_multiplicador"))
+)
+
+fluidRow(
+  column(6, uiOutput("qmd_card_vab")),
+  column(6, uiOutput("qmd_card_emprego"))
+)
+```
+
+:::
+
+::::
+
+### Impacto sobre a produção setorial
+
+```{r}
+plotOutput("qmd_grafico_impacto", height = "520px")
+```
+
+### Resultados por setor
+
+```{r}
+DTOutput("qmd_tabela_impactos")
+```
+
+## Indicadores estruturais
+
+Os indicadores abaixo são calculados uma única vez a partir da matriz original.
+Eles não mudam quando o usuário altera o choque de demanda final.
+
+### Multiplicadores de produção
+
+```{r}
+#| fig-height: 6
+#| fig-width: 10
+
+grafico_barras(
+  indicadores$multiplicadores,
+  "producao",
+  "Multiplicadores de produção",
+  "R$ de produção por R$ de demanda final"
+)
+```
+
+### Multiplicadores de emprego
+
+```{r}
+#| fig-height: 6
+#| fig-width: 10
+
+grafico_barras(
+  indicadores$multiplicadores,
+  "emprego_simples",
+  "Multiplicadores simples de emprego",
+  "Pessoas por R$ 1 milhão de demanda final"
+)
+```
+
+O multiplicador simples mede o número estimado de pessoas ocupadas gerado na
+economia por R$ 1 milhão adicional de demanda final no setor correspondente.
+
+### Índices de ligação
+
+```{r}
+#| fig-height: 7
+#| fig-width: 10
+
+ggplot(
+  indicadores$ligacoes,
+  aes(x = para_frente, y = para_tras, label = setor)
+) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "#5c6f7b") +
+  geom_vline(xintercept = 1, linetype = "dashed", color = "#5c6f7b") +
+  geom_point(aes(color = setor_chave), size = 3) +
+  geom_text_repel(size = 4, max.overlaps = Inf) +
+  scale_color_manual(
+    values = c("Setor-chave" = "#b23a48", "Não" = "#176b87")
+  ) +
+  labs(
+    title = "Índices de ligação de Rasmussen-Hirschman",
+    x = "Ligação para frente",
+    y = "Ligação para trás",
+    color = NULL
+  ) +
+  theme_minimal(base_size = 13)
+```
+
+```{r}
+indicadores$ligacoes %>%
+  rename(
+    Setor = setor,
+    `Ligação para trás` = para_tras,
+    `Ligação para frente` = para_frente,
+    Classificação = setor_chave
+  ) %>%
+  datatable(
+    rownames = FALSE,
+    options = list(dom = "t", paging = FALSE)
+  ) %>%
+  formatRound(2:3, 4, dec.mark = ",", mark = ".")
+```
+
+### Índices puros de ligação
+
+```{r}
+indicadores$indices_puros %>%
+  rename(Setor = setor) %>%
+  datatable(
+    rownames = FALSE,
+    options = list(dom = "t", paging = FALSE)
+  ) %>%
+  formatRound(2:4, 4, dec.mark = ",", mark = ".")
+```
+
+### Campo de influência
+
+```{r}
+#| fig-height: 8
+#| fig-width: 10
+
+ggplot(
+  indicadores$campo,
+  aes(x = consumidor, y = fornecedor, fill = influencia)
+) +
+  geom_tile(color = "white", linewidth = 0.2) +
+  scale_fill_gradient(low = "#eef6f8", high = "#164b60") +
+  labs(
+    title = "Campo de influência",
+    x = "Setor consumidor",
+    y = "Setor fornecedor",
+    fill = "Influência"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid = element_blank()
+  )
+```
+
+## Diagnóstico da matriz
+
+```{r}
+data.frame(
+  Verificação = c(
+    "Número de setores",
+    "Raio espectral de A",
+    "Número de condição de I - A",
+    "Máxima folga em X = Z1 + y"
+  ),
+  Resultado = c(
+    modelo$n,
+    formatar_numero(modelo$raio_espectral, 6),
+    formatar_numero(modelo$condicao_sistema, 6),
+    paste0("R$ ", formatar_numero(modelo$erro_balanco, 6), " milhões")
+  ),
+  stringsAsFactors = FALSE
+) %>%
+  knitr::kable(align = c("l", "r"))
+```
+
+A folga máxima da identidade $X = Z\mathbf{1} + y$ é herdada do balanceamento
+da TRUR e está documentada na aba `19_Diagnostico` da planilha-fonte.
+
+## Extensão futura: remunerações
+
+O vetor de remunerações ainda não faz parte da planilha usada nesta versão.
+Quando ele for acrescentado, será possível calcular o coeficiente direto de
+remunerações por unidade de produção,
+
+$$
+c_i^r = \frac{r_i}{x_i},
+$$
+
+e aplicar esses coeficientes ao impacto produtivo para obter a variação de
+remunerações associada ao choque. Nenhum valor foi estimado ou preenchido
+provisoriamente nesta versão.
+
+## Fonte e limitações
+
+Fonte: elaboração própria com base na MIP do Piauí de 2018 contida em
+`dados/nota_6.xlsx`.
+
+O modelo supõe tecnologia fixa, retornos constantes de escala, ausência de
+restrições de capacidade e atendimento integral da demanda adicional. Essas
+hipóteses devem ser consideradas na interpretação econômica dos resultados.
+
+```{r}
+#| context: server
+#| include: false
+
+output$qmd_entrada_magnitude <- renderUI({
+  if (identical(input$qmd_tipo_choque, "percentual")) {
+    numericInput(
+      "qmd_magnitude_choque",
+      "Variação da demanda final (%)",
+      value = 10,
+      step = 1
+    )
+  } else {
+    numericInput(
+      "qmd_magnitude_choque",
+      "Variação da demanda final (R$ milhões)",
+      value = 100,
+      step = 10
+    )
+  }
+})
+
+output$qmd_demanda_original <- renderUI({
+  indice <- match(input$qmd_setor_choque, modelo$setores)
+
+  div(
+    class = "qmd-callout",
+    strong("Demanda final original"),
+    br(),
+    paste0("R$ ", formatar_numero(modelo$y[indice]), " milhões")
+  )
+})
+
+qmd_resultado_choque <- reactive({
+  req(
+    input$qmd_setor_choque,
+    input$qmd_tipo_choque,
+    input$qmd_magnitude_choque
+  )
+
+  tryCatch(
+    simular_choque(
+      modelo = modelo,
+      setor = input$qmd_setor_choque,
+      tipo = input$qmd_tipo_choque,
+      magnitude = input$qmd_magnitude_choque
+    ),
+    error = function(e) {
+      structure(
+        list(mensagem = conditionMessage(e)),
+        class = "erro_choque"
+      )
+    }
+  )
+})
+
+qmd_resultado_valido <- reactive({
+  resultado <- qmd_resultado_choque()
+  validate(
+    need(!inherits(resultado, "erro_choque"), resultado$mensagem)
+  )
+  resultado
+})
+
+output$qmd_mensagem_erro <- renderUI({
+  resultado <- qmd_resultado_choque()
+
+  if (inherits(resultado, "erro_choque")) {
+    div(class = "alert alert-danger", resultado$mensagem)
+  }
+})
+
+qmd_card <- function(rotulo, valor, complemento = NULL) {
+  div(
+    class = "qmd-metric",
+    div(class = "qmd-metric-label", rotulo),
+    div(class = "qmd-metric-value", valor),
+    if (!is.null(complemento)) tags$small(complemento)
+  )
+}
+
+output$qmd_card_producao <- renderUI({
+  resultado <- qmd_resultado_valido()
+  qmd_card(
+    "Impacto total na produção",
+    paste0("R$ ", formatar_numero(resultado$impacto_producao_total), " mi")
+  )
+})
+
+output$qmd_card_indireto <- renderUI({
+  resultado <- qmd_resultado_valido()
+  qmd_card(
+    "Efeito indireto na produção",
+    paste0("R$ ", formatar_numero(resultado$efeito_indireto), " mi")
+  )
+})
+
+output$qmd_card_multiplicador <- renderUI({
+  resultado <- qmd_resultado_valido()
+  qmd_card(
+    "Multiplicador de produção",
+    formatar_numero(resultado$multiplicador, 3),
+    "R$ de produção por R$ de demanda"
+  )
+})
+
+output$qmd_card_vab <- renderUI({
+  resultado <- qmd_resultado_valido()
+  qmd_card(
+    "Impacto total no VAB",
+    paste0("R$ ", formatar_numero(resultado$impacto_vab_total), " mi")
+  )
+})
+
+output$qmd_card_emprego <- renderUI({
+  resultado <- qmd_resultado_valido()
+  qmd_card(
+    "Impacto total no emprego",
+    paste0(formatar_numero(resultado$impacto_emprego_total), " pessoas")
+  )
+})
+
+output$qmd_grafico_impacto <- renderPlot({
+  resultado <- qmd_resultado_valido()
+
+  dados_plot <- resultado$tabela %>%
+    mutate(setor = reorder(setor, impacto_producao))
+
+  ggplot(
+    dados_plot,
+    aes(
+      x = setor,
+      y = impacto_producao,
+      fill = impacto_producao >= 0
+    )
+  ) +
+    geom_col(show.legend = FALSE) +
+    coord_flip() +
+    scale_fill_manual(
+      values = c("TRUE" = "#176b87", "FALSE" = "#b23a48")
+    ) +
+    scale_y_continuous(
+      labels = label_number(big.mark = ".", decimal.mark = ",")
+    ) +
+    labs(
+      title = "Impacto do choque sobre a produção setorial",
+      subtitle = paste0(
+        resultado$setor,
+        ": R$ ",
+        formatar_numero(resultado$valor_choque),
+        " milhões"
+      ),
+      x = NULL,
+      y = "R$ milhões"
+    ) +
+    theme_minimal(base_size = 13) +
+    theme(panel.grid.major.y = element_blank())
+})
+
+output$qmd_tabela_impactos <- renderDT({
+  tabela <- qmd_resultado_valido()$tabela %>%
+    rename(
+      Setor = setor,
+      `Choque direto (R$ mi)` = choque_direto,
+      `Impacto na produção (R$ mi)` = impacto_producao,
+      `Impacto no VAB (R$ mi)` = impacto_vab,
+      `Impacto no emprego (pessoas)` = impacto_emprego,
+      `Participação no impacto` = participacao_impacto,
+      `Impacto / VBP inicial` = impacto_producao_pct_vbp
+    )
+
+  datatable(
+    tabela,
+    rownames = FALSE,
+    options = list(pageLength = 12, scrollX = TRUE, dom = "tip"),
+    class = "stripe hover compact"
+  ) %>%
+    formatRound(2:5, digits = 2, dec.mark = ",", mark = ".") %>%
+    formatPercentage(6:7, digits = 2, dec.mark = ",", mark = ".")
+})
+```
+

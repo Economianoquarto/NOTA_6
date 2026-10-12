@@ -1,0 +1,15 @@
+# Saidas geradas pelo Quarto (recriadas a cada render ou preview)
+nota_6_choques.html
+nota_6_choques_files/
+*.knit.md
+.quarto/
+
+# Estado local do R/RStudio/Positron
+.Rproj.user/
+.Rhistory
+.RData
+
+# Arquivos temporarios do Excel e do sistema
+~$*
+.DS_Store
+Thumbs.db
