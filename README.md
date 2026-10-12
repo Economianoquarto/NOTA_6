@@ -65,9 +65,29 @@ causa da configuração `"quarto.useBundledQuartoInPositron": true` nas
 configurações do usuário. O Quarto CLI instalado no sistema (1.1.251, que é o
 chamado pelo comando `quarto` no terminal) não serve este documento: com ele, o
 Preview falha logo após o knit porque o processo R não encontra o `.qmd`. Essa
-instalação também precisa ser atualizada antes da publicação no **Posit Connect
-Cloud**, cujo provedor de publicação foi incorporado em versões posteriores do
-Quarto.
+instalação só precisaria ser atualizada para publicar pelo comando
+`quarto publish posit-connect-cloud`; a publicação pelo GitHub, descrita abaixo,
+não depende dela.
+
+### Publicação pelo GitHub (`manifest.json`)
+
+O `manifest.json` informa ao **Posit Connect Cloud** que o conteúdo é o artigo
+(`quarto-shiny`, documento principal `nota_6_choques.qmd`) e com quais versões
+do R, do Quarto e dos pacotes ele roda. Gere-o de novo sempre que mudarem os
+arquivos ou os pacotes usados, executando na pasta `NOTA_6`:
+
+```r
+Sys.setenv(QUARTO_PATH = "C:/Program Files/Positron/resources/app/quarto/bin/quarto.exe")
+rsconnect::writeManifest(
+  appFiles = c("nota_6_choques.qmd", "app.R", "dados/nota_6.xlsx"),
+  appPrimaryDoc = "nota_6_choques.qmd",
+  appMode = "quarto-shiny"
+)
+```
+
+O `appMode` precisa ser informado: como a pasta também tem `app.R`, sem ele o
+`rsconnect` registra o aplicativo Shiny no lugar do artigo. O `QUARTO_PATH`
+aponta para o Quarto do Positron, porque o do sistema é antigo demais.
 
 ## Verificação
 
